@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum AiLogType {
+  chat
+  study_plan
+  career_guidance
+  motivation
+  resume_optimization
+  flashcards
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash    String
+  displayName     String?
+  oauthProvider   String?
+  oauthSubjectId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  preferences Json?
+
+  tasks        Task[]
+  studyPlans   StudyPlan[]
+  analytics    Analytics[]
+  aiLogs       AI_Logs[]
+  habits       Habit[]
+  notes        Note[]
+
+  @@map("Users")
+}
+
+model Task {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  subject     String?
+  priority    TaskPriority @default(medium)
+  status      TaskStatus   @default(todo)
+
+  deadline    DateTime?
+  orderIndex  Int          @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, deadline])
+
+  @@map("Tasks")
+}
+
+model StudyPlan {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  planJson    Json
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+
+  @@map("StudyPlans")
+}
+
+model Analytics {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date DateTime
+
+  points                  Int    @default(0)
+  streakCount             Int    @default(0)
+  pomodoroSessions       Int    @default(0)
+  tasksCompleted          Int    @default(0)
+
+  weakSubjects Json?
+  strongSubjects Json?
+
+  achievements Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date], name: "userId_date")
+
+  @@map("Analytics")
+}
+
+model AI_Logs {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      AiLogType
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+
+  @@map("AI_Logs")
+}
+
+model Habit {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  color       String?
+  icon        String?
+  frequency   String   @default("daily")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs        HabitLog[]
+
+  @@index([userId])
+  @@map("Habits")
+}
+
+model HabitLog {
+  id        String   @id @default(uuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId    String
+  date      String
+
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+  @@index([userId, date])
+  @@map("HabitLogs")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title     String
+  content   String
+  subject   String?
+  tags      Json?
+  pinned    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("Notes")
+}
